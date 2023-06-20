@@ -50,3 +50,8 @@ EKS 실습
 - https://catalog.us-east-1.prod.workshops.aws/workshops/46236689-b414-4db8-b5fc-8d2954f2d94a/ko-KR
 - Cloud9 환경에서 EKS 설치 ~~....aws cli에선 설치 못하나? 🤔~~
 - pod 생성 -> replicaset 생성 및 반영 -> deploymeny 생성 및 반영 -> service 생성 및 반영
+
+
+Ref.
+- eksctl 명령어 관련 문서 : https://eksctl.io/usage/creating-and-managing-clusters/
+- AWS EKS 공식 문서 : https://docs.aws.amazon.com/eks/latest/userguide/what-is-eks.html?refid=fa2d6ba3-df80-4d24-a453-bf30ad163af9
