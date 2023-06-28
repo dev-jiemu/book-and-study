@@ -20,6 +20,10 @@ docker start [container id]
 docker stop [container id]
 docker rm [container id]
 ```
+#### dockerfile을 이용한 image build
+```
+docker build --tag [tag name]:[version] .
+```
 
 <br>
 
