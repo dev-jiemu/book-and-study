@@ -70,7 +70,6 @@ ENTRYPOINT ["/main"]
 
 <br>
 
-### ECR
 #### aws configure
 ```
 aws configure
@@ -88,19 +87,33 @@ vi ~/.aws/credentials
 ```
 aws [service] ls --profile [profile name]
 ```
+<br>
+
+#### AWS ECR
 ECR image push 명령어는 <strong>Amazon ECR 레퍼지토리 페이지</strong>에서 확인
 
-sample
+example
 <p><img src="image/ecr/2023-06-27 ecr.png"/></p>
+
+ECR에 등록된 docker image를 pull 하고 싶다면
+```
+docker pull [repository image url].ap-northeast-1.amazonaws.com/ecs-nginx:[tag name]
+```
 
 <br>
 
 
 ### ECS
-1. VPC 생성
-2. 서브넷 생성(public subnet 포함)
-3. route table 생성
-4. internet gateway 생성
+1. 네트워크 구성
+- VPC, Subnet, Route table, Internet gateway(subnet public 처리)
+- public subnet 로드밸런서 구성
+- VPC 내 특정 포트에 대한 대상 그룹 생성 및 로드밸런서 연결
+2. Task 구성
+- 컨테이너에서 사용할 docker image 지정(ECR URL)
+- 한 컨테이너에 cpu 용량 등 지정
+- family를 통해 task의 버전을 개정하고 무중단배포를 용이하게 할수 있음(docker image update?)
+3. Service 구성
+- 한 서비스에 테스크를 몇개로 구성할지 정할 수 있음(n중화?)
 
 <br>
 
@@ -109,3 +122,4 @@ Ref
 - https://dev-racoon.tistory.com/23
 - https://devlog-wjdrbs96.tistory.com/296
 - https://waspro.tistory.com/426
+- https://abbo.tistory.com/442
