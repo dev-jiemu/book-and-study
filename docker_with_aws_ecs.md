@@ -15,10 +15,10 @@ docker ps -a
 #### container 생성 및 실행, 정지 삭제
 ```
 docker create -i -t --name ecs-nginx-container -p 8080:80 [image id]
-docker start [image id]
+docker start [container id]
 
-docker stop [image id]
-docker rm [image id]
+docker stop [container id]
+docker rm [container id]
 ```
 
 <br>
