@@ -24,6 +24,10 @@ docker rm [container id]
 ```
 docker build --tag [tag name]:[version] .
 ```
+#### 실행중인 container의 터미널 접속을 하고 싶다면
+```
+docker exec -it <container_id> /bin/sh
+```
 
 <br>
 
@@ -61,15 +65,17 @@ ENV GO111MODULE=on \
     GOARCH=amd64
 
 WORKDIR /build
-COPY go.mod go.sum main.go ./
+COPY go.mod go.sum pkg/main.go ./
 RUN go mod download
 RUN go build -o main .
 WORKDIR /dist
 RUN cp /build/main .
 
-FROM scratch
+FROM alpine
 COPY --from=builder /dist/main .
 ENTRYPOINT ["/main"]
+
+CMD ["/bin/sh"]
 ```
 
 <br>
