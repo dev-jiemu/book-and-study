@@ -99,3 +99,4 @@ spring.redis.pool.max-wait=-1
 ### Ref.
 - [Redis는 무엇이고, 어떻게 사용하는 것이 좋은가](https://github.com/binghe819/TIL/blob/master/DB/Redis/Redis%EB%8A%94%20%EB%AC%B4%EC%97%87%EC%9D%B4%EA%B3%A0,%20%EC%96%B4%EB%96%BB%EA%B2%8C%20%EC%82%AC%EC%9A%A9%ED%95%98%EB%8A%94%20%EA%B2%83%EC%9D%B4%20%EC%A2%8B%EC%9D%80%EA%B0%80/Redis%EB%8A%94%20%EB%AC%B4%EC%97%87%EC%9D%B4%EA%B3%A0,%20%EC%96%B4%EB%96%BB%EA%B2%8C%20%EC%82%AC%EC%9A%A9%ED%95%98%EB%8A%94%20%EA%B2%83%EC%9D%B4%20%EC%A2%8B%EC%9D%80%EA%B0%80.md)
 - [Spring Boot 에서 Redis를 연동하는 방법](https://oingdaddy.tistory.com/310)
+- [Spring Boot Redis With JPA](https://velog.io/@ililil9482/spring-redis-jpa-redisTemplate-%EC%82%AC%EC%9A%A9%ED%95%98%EA%B8%B0)
