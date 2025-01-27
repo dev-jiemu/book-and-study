@@ -143,3 +143,44 @@ class Greeter {
     greeting: string
 }
 ```
+
+##### 매개변수 데커레이터
+```typescript
+import {BadRequestException} from '@nestjs/common'
+
+const MinLength = (min: number) => {
+    return (target: any, propertyKey: string, parameterIndex: number) => {
+        target.validators = {
+            minLength: (args: string[]) => {
+                return args[parameterIndex].length >= min
+            }
+        }
+    }
+}
+
+const Validate = (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+    const method = descriptor.value
+
+    descriptor.value = (...args) => {
+        Object.keys(target.validators).forEach(key => {
+            if(!target.validators[key](args)) {
+                throw new BadRequestException()
+            }
+        })
+        method.apply(this, args)
+    }
+}
+
+class User {
+    private name: string
+    
+    @Validate 
+    setName(@MinLength(3) name: string) {
+        this.name = name
+    }
+}
+
+const t = new User()
+t.setName('Dexter') // Dexter
+t.setName('De') // exception
+```
