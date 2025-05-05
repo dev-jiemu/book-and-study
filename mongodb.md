@@ -63,3 +63,21 @@ db.collection.bulkWrite([
 | **유연성**       | 낮음                                    | 높음                                       |
 | **성능**         | 단일 `update` 작업에 적합               | 대량 작업 시 성능 최적화 가능             |
 
+---
+
+#### Aggregate
+
+- find랑 비슷하긴 한데 RDS로 치면 JOIN을 해야 하는 경우 보통 사용함
+```json
+[
+    {
+        $match: {
+            "$end": [],
+            "$or": [],
+            "accountID": "",
+        }
+    }
+]
+```
+
+Document. https://www.mongodb.com/ko-kr/docs/manual/aggregation/
