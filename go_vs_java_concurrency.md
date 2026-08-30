@@ -206,3 +206,120 @@ Go는 문법이 가볍다 보니 오히려 이런 실수를 더 쉽게 저지르
 
 - [Go's Concurrency Model vs. Java Virtual Threads: A Practical Comparison - Java Code Geeks](https://www.javacodegeeks.com/2026/05/gos-concurrency-model-vs-java-virtual-threads-a-practical-comparison.html)
 - [Concurrency in Go vs Java - Keep It Simple, Stupid!](https://blog.skopow.ski/concurrency-in-go-vs-java)
+
+## 2026-08-30 추가 학습: `synchronized` vs `ReentrantLock`
+
+### 개요
+
+은행 계좌 이체 시뮬레이터 토이 프로젝트(`bank-transfer-concurrency`)에서
+`SynchronizedTransferService`와 `LockTransferService`를 나란히 구현해보면서,
+`synchronized`와 `ReentrantLock`의 차이를 실제 코드로 비교했다.
+
+### 핵심 내용
+
+- **락 해제 방식**: `synchronized`는 언어 문법이라 블록을 벗어나면(정상 종료든
+  예외든) JVM이 자동으로 락을 풀어준다. `ReentrantLock`은 그냥 객체라서
+  `lock()`/`unlock()`을 직접 호출해야 하고, `unlock()`을 `finally`에 안 넣으면
+  예외 발생 시 락이 영원히 안 풀리는 버그가 생긴다.
+- **`tryLock()` / `tryLock(timeout, unit)`**: 락을 못 얻으면 무한정 기다리지 않고
+  바로 포기하거나 일정 시간만 기다릴 수 있다. 데드락을 사후 감지하는 게 아니라
+  애초에 회피/재시도 전략을 짤 수 있다는 뜻. `synchronized`는 얻을 때까지 무조건
+  블로킹이라 이런 선택지가 없다.
+- **`lockInterruptibly()`**: 락을 기다리는 스레드를 인터럽트로 깨울 수 있다.
+  `synchronized`로 대기 중인 스레드는 인터럽트가 먹히지 않는다.
+- **공정성(fairness)**: `new ReentrantLock(true)`로 만들면 가장 오래 기다린
+  스레드부터 락을 주도록 강제할 수 있다. `synchronized`는 이런 설정 자체가 없다
+  (구현체가 알아서 함, 대개 불공정).
+- **조건 변수**: `ReentrantLock.newCondition()`으로 조건 변수를 여러 개 만들 수
+  있다. `synchronized`의 `wait()/notify()`는 모니터당 대기 집합이 하나뿐이라
+  용도별로 나눠 깨울 수 없다.
+- **상태 조회**: `ReentrantLock`은 `isLocked()`, `getQueueLength()` 같은 API로
+  락 상태를 프로그램에서 조회할 수 있다. `synchronized`는 이런 introspection이
+  없다.
+- **성능**: 경합이 적을 땐 현대 JVM의 최적화(적응형 스피닝, 락 코어스닝 등) 덕에
+  둘이 비등비등하고, 경합이 아주 심해질 때 `ReentrantLock`의 이점(공정성,
+  tryLock)이 드러나는 편.
+- **Go와의 대응 관계**: Go에는 `synchronized` 같은 언어 키워드가 없다. `sync.Mutex`는
+  자바의 `ReentrantLock`처럼 그냥 객체이고 `Lock()`/`Unlock()`을 직접 호출하는
+  방식(보통 `defer mu.Unlock()`으로 `finally`를 흉내냄)이라, 사실 자바의
+  `synchronized`보다 `ReentrantLock`이 Go의 `sync.Mutex`에 더 가까운 대응 관계다.
+  `TryLock()`도 Go 1.18부터 추가됨.
+
+### 예시 / 코드
+
+두 계좌(`from`, `to`)를 모두 잠가야 하는데, 스레드마다 잠그는 순서가 다르면
+데드락이 날 수 있어서 둘 다 계좌 id 기준으로 잠금 순서를 고정했다.
+
+`synchronized` 버전 — 계좌 객체 자체를 모니터로 사용:
+```java
+public class SynchronizedTransferService implements TransferService {
+
+    @Override
+    public boolean transfer(Account from, Account to, long amount) {
+        Account first = from.getId().compareTo(to.getId()) <= 0 ? from : to;
+        Account second = (first == from) ? to : from;
+
+        synchronized (first) {
+            synchronized (second) {
+                if (from.getBalance() < amount) {
+                    return false;
+                }
+                from.adjustBalance(-amount);
+                to.adjustBalance(amount);
+                return true;
+            }
+        }
+    }
+}
+```
+
+`ReentrantLock` 버전 — `Account`에는 락 필드가 없어서, 계좌 id → `ReentrantLock`
+맵을 구현체가 직접 관리해야 했다(그만큼 코드가 더 장황해짐):
+```java
+public class LockTransferService implements TransferService {
+
+    private final ConcurrentHashMap<String, ReentrantLock> locks = new ConcurrentHashMap<>();
+
+    @Override
+    public boolean transfer(Account from, Account to, long amount) {
+        boolean fromFirst = from.getId().compareTo(to.getId()) <= 0;
+        ReentrantLock firstLock = lockFor(fromFirst ? from : to);
+        ReentrantLock secondLock = lockFor(fromFirst ? to : from);
+
+        firstLock.lock();
+        try {
+            secondLock.lock();
+            try {
+                if (from.getBalance() < amount) {
+                    return false;
+                }
+                from.adjustBalance(-amount);
+                to.adjustBalance(amount);
+                return true;
+            } finally {
+                secondLock.unlock();
+            }
+        } finally {
+            firstLock.unlock();
+        }
+    }
+
+    private ReentrantLock lockFor(Account account) {
+        return locks.computeIfAbsent(account.getId(), id -> new ReentrantLock());
+    }
+}
+```
+
+동일한 시뮬레이션(계좌 10개, 워커 8개 × 10만 회 이체)으로 돌려본 결과, 이 정도
+경합에서는 눈에 띄는 성능 차이는 없었다:
+
+```
+SynchronizedTransferService: 54ms, 총액 보존 OK
+LockTransferService:         67ms, 총액 보존 OK
+```
+
+### 질문했던 것들
+
+- **`synchronized`랑 `ReentrantLock`이 두 개 비교는 뭐가 다른가?**
+  → 위 "핵심 내용" 참고. 자동/수동 락 해제가 가장 큰 차이이고, `ReentrantLock`은
+  tryLock/인터럽트/공정성/조건변수 등 `synchronized`에 없는 제어권을 제공한다.
